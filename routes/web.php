@@ -57,6 +57,10 @@ Route::middleware('auth')->group(function () {
 Route::get('admin/login', [AuthController::class, 'index'])->name('admin-login');
 Route::post('post/login', [AuthController::class, 'postLogin'])->name('admin-login.post'); 
 
+
+Route::get('/admin/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+Route::post('/admin/attendance/mark', [AttendanceController::class, 'markAttendance'])->name('attendance.mark');
+
 Route::get('admin/logout', [AuthController::class, 'logout'])->name('admin-logout');
 Route::middleware('auth:admin')->prefix('admin')->group(function () {
  Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('admin-dashboard'); 
