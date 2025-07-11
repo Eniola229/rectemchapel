@@ -11,6 +11,9 @@ use Hash;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use App\Models\Student;
+use App\Models\Attendance;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -91,12 +94,27 @@ class AuthController extends Controller
      *
      * @return View|RedirectResponse
      */
-    public function dashboard()
-    {
-        $studentsCount = Student::all()->count();
+        public function dashboard()
+        {
+            $studentsCount = Student::count();
 
-        return view('admin.dashboard', compact("studentsCount"));
-    }
+            $todayAttendanceCount = Attendance::whereDate('created_at', Carbon::today())->count();
+
+            $dailyAttendanceData = DB::table('attendances')
+                ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as total'))
+                ->groupBy(DB::raw('DATE(created_at)'))
+                ->orderBy(DB::raw('DATE(created_at)'), 'desc')
+                ->take(7)
+                ->get()
+                ->reverse();
+
+            return view('admin.dashboard', [
+                'studentsCount' => $studentsCount,
+                'todayAttendanceCount' => $todayAttendanceCount,
+                'dailyAttendanceData' => $dailyAttendanceData,
+            ]);
+        }
+        
 
     /**
      * Create a new admin instance.
