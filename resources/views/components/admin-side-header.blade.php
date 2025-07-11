@@ -26,6 +26,11 @@
             </a>
           </li>
            <li>
+            <a href="{{ url('admin/attendance/history') }}">
+              <i class="bi bi-circle"></i><span>Attendance History</span>
+            </a>
+          </li>
+           <li>
             <a href="{{ url('admin/time') }}">
               <i class="bi bi-circle"></i><span>Time</span>
             </a>

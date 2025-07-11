@@ -11,26 +11,41 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Response;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AttendanceController extends Controller
 {
-        public function index()
-        {
-            $today = now()->toDateString();
-            $service = Time::where('day', now()->format('l'))->first();
-            $students = Student::all();
+    public function index()
+    {
+        $today = now()->format('l'); // e.g. 'Sunday', 'Monday', etc.
+        $service = Time::where('day', $today)->first();
 
-            $present = Attendance::where('date', $today)
-                ->where('service', $service->service ?? null)
-                ->pluck('student_id')
-                ->toArray();
+        $attendanceClosed = false;
 
+        if (!$service) {
             return view('admin.attendance', [
-                'students' => $students,
-                'time' => $service,
-                'presentIds' => $present,
+                'students' => [],
+                'presentIds' => [],
+                'time' => null,
+                'attendanceClosed' => true
             ]);
         }
+
+        $students = Student::all();
+        $present = Attendance::whereDate('created_at', now())
+            ->where('service', $service->service)
+            ->pluck('student_id')
+            ->toArray();
+
+        return view('admin.attendance', [
+            'students' => $students,
+            'presentIds' => $present,
+            'time' => $service,
+            'attendanceClosed' => now()->format('H:i') > $service->time
+        ]);
+    }
+
 
     public function markAttendance(Request $request)
     {
@@ -76,4 +91,78 @@ class AttendanceController extends Controller
             return response()->json(['error' => 'Server Error'], 500);
         }
     }
+
+    public function attendancehistory()
+    {
+        $attendances = Attendance::with('student')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy(function ($record) {
+                return $record->created_at->toDateString(); // Group by date
+            })
+            ->map(function ($daily) {
+                return $daily->groupBy('service'); // Then by service
+            });
+
+        return view('admin.attendance-history', [
+            'attendanceByDate' => $attendances
+        ]);
+    }
+
+    public function exportCsv(Request $request)
+{
+    $date = $request->query('date');
+    $service = $request->query('service');
+
+    $records = Attendance::with('student')
+        ->whereDate('created_at', $date)
+        ->where('service', $service)
+        ->get();
+
+    $filename = "attendance_{$service}_{$date}.csv";
+
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+
+    $callback = function () use ($records) {
+        $handle = fopen('php://output', 'w');
+        fputcsv($handle, ['Name', 'Matric No', 'Service', 'Status', 'Time']);
+
+        foreach ($records as $record) {
+            fputcsv($handle, [
+                $record->student->name,
+                $record->student->matric_no,
+                $record->service,
+                $record->is_late ? 'Late' : 'On Time',
+                $record->created_at->format('h:i A'),
+            ]);
+        }
+
+        fclose($handle);
+    };
+
+    return Response::stream($callback, 200, $headers);
+}
+
+
+public function exportPdf(Request $request)
+{
+    $date = $request->query('date');
+    $service = $request->query('service');
+
+    $records = Attendance::with('student')
+        ->whereDate('created_at', $date)
+        ->where('service', $service)
+        ->get();
+
+    $pdf = Pdf::loadView('exports.attendance-pdf', [
+        'records' => $records,
+        'service' => $service,
+        'date' => $date,
+    ]);
+
+    return $pdf->download("attendance_{$service}_{$date}.pdf");
+}
 }

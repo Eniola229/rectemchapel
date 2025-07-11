@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Ramsey\Uuid\Uuid;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Student;
+
 
 class Attendance extends Model
 {
@@ -35,4 +37,10 @@ class Attendance extends Model
         'is_late',
         'date'
     ];
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
+
 }

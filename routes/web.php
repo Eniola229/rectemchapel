@@ -60,6 +60,10 @@ Route::post('post/login', [AuthController::class, 'postLogin'])->name('admin-log
 
 Route::get('/admin/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
 Route::post('/admin/attendance/mark', [AttendanceController::class, 'markAttendance'])->name('attendance.mark');
+Route::get('/attendance/export/csv', [AttendanceController::class, 'exportCsv'])->name('attendance.export.csv');
+Route::get('/attendance/export/pdf', [AttendanceController::class, 'exportPdf'])->name('attendance.export.pdf');
+
+
 
 Route::get('admin/logout', [AuthController::class, 'logout'])->name('admin-logout');
 Route::middleware('auth:admin')->prefix('admin')->group(function () {
@@ -78,6 +82,7 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
  Route::get('/schedule/{id}', [AddDateTimeController::class, 'edit']);
  Route::put('/schedule/update/{id}', [AddDateTimeController::class, 'update']);
  Route::delete('/schedule/delete/{id}', [AddDateTimeController::class, 'destroy']);
+ Route::get('/attendance/history', [AttendanceController::class, 'attendancehistory'])->name('attendance.history');
 
 });
 
