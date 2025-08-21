@@ -42,7 +42,7 @@
                             </span>
                         </li>
                     @empty
-                        <li class="list-group-item text-muted">No records for this service</li>
+                        <li class="list-group-item text-muted">No records found</li>
                     @endforelse
                 </ul>
             </div>

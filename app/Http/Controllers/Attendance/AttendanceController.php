@@ -18,9 +18,11 @@ class AttendanceController extends Controller
 {
     public function index()
     {
+
         $today = now()->format('l'); // e.g. 'Sunday', 'Monday', etc.
         $service = Time::where('day', $today)->first();
-
+        $now = now()->subHours(8);
+        
         $attendanceClosed = false;
 
         if (!$service) {
@@ -42,7 +44,7 @@ class AttendanceController extends Controller
             'students' => $students,
             'presentIds' => $present,
             'time' => $service,
-            'attendanceClosed' => now()->format('H:i') > $service->time
+            'attendanceClosed' => $now->format('H:i') > $service->time
         ]);
     }
 

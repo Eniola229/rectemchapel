@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'fingerprint' => [
+        'exe_path' => base_path('fingerprint/FingerprintTest.exe'),
+    ],
+
 ];

@@ -97,12 +97,19 @@
               <input type="email" class="form-control" name="email" placeholder="Email" required>
             </div>
 
+
             <div class="col-md-4">
-              <input type="text" class="form-control" name="department" placeholder="Department" required>
+              <select class="form-control" id="department" name="department" required>
+                <option value="">-- Select Department --</option>
+                <option value="Computer Science">Computer Science</option>
+              </select>
             </div>
 
             <div class="col-md-4">
-              <input type="text" class="form-control" name="school" placeholder="School" required>
+              <select class="form-control" id="school" name="school" required>
+                <option value="">-- Select School --</option>
+                <option value="science">School of Science</option>
+              </select>
             </div>
 
             <div class="col-md-4">
@@ -123,7 +130,7 @@
 
             <!-- Fingerprint Capture Section -->
             <div class="col-12">
-              <button type="button" id="fingerprintBtn" class="btn btn-primary">Capture Fingerprint</button>
+              <button type="button" id="fingerprintBtn" class="btn btn-primary"><i class="bi bi-fingerprint"></i>Capture Fingerprint</button>
               <input type="hidden" name="fingerprint" id="fingerprintData">
               <div id="fingerprintMessage" class="mt-2"></div>
             </div>
@@ -153,6 +160,8 @@
 
   </main><!-- End #main -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <script>
      $(document).ready(function () {
       // ---------------------------
@@ -185,41 +194,28 @@
       // ---------------------------
       // Fingerprint Capture Functions
       // ---------------------------
-      // Mock version of FingerprintSDK
-      if (typeof FingerprintSDK === 'undefined') {
-        var FingerprintSDK = {
-          isAvailable: function () {
-            return true;
-          },
-          captureFingerprint: function (successCallback, errorCallback) {
-            setTimeout(() => {
-              const mockData = "MOCKED_BASE64_FINGERPRINT_" + Math.random().toString(36).substring(2, 10);
-              successCallback(mockData);
-            }, 1000);
-          }
-        };
-      }
-
-      // Capture function using mock or real SDK
-      function captureExternalFingerprint() {
-        $('#fingerprintMessage').html('Capturing fingerprint...');
-        if (typeof FingerprintSDK !== 'undefined' && FingerprintSDK.isAvailable()) {
-          FingerprintSDK.captureFingerprint(function (fingerprintData) {
-            $('#fingerprintData').val(fingerprintData);
-            $('#fingerprintPreview').text(fingerprintData);
-            $('#fingerprintMessage').html('<span class="text-success">Fingerprint captured successfully!</span>');
-          }, function (error) {
-            $('#fingerprintMessage').html('<span class="text-danger">Error capturing fingerprint: ' + error.message + '</span>');
-          });
-        } else {
-          $('#fingerprintMessage').html('<span class="text-danger">External fingerprint scanner is not available or SDK not loaded.</span>');
-        }
-      }
-
-      // Click handler
       $('#fingerprintBtn').on('click', function () {
-        captureExternalFingerprint();
+        $('#fingerprintMessage').html('Capturing fingerprint...');
+
+        $.ajax({
+          url: '/fingerprint/capture',
+          type: 'POST',
+          data: {_token: '{{ csrf_token() }}'},
+          success: function(response) {
+            if (response.success) {
+              $('#fingerprintData').val(response.data);
+              $('#fingerprintPreview').text(response.data);
+              $('#fingerprintMessage').html('<span class="text-success">' + response.message + '</span>');
+            } else {
+              $('#fingerprintMessage').html('<span class="text-danger">' + response.message + '</span>');
+            }
+          },
+          error: function(xhr) {
+            $('#fingerprintMessage').html('<span class="text-danger">Error: ' + xhr.responseJSON.message + '</span>');
+          }
+        });
       });
+
       // ---------------------------
       // Form Submission Handler
       // ---------------------------
@@ -236,10 +232,10 @@
           name: $("input[name='name']").val(),
           matric_no: $("input[name='matric_no']").val(),
           email: $("input[name='email']").val(),
-          school: $("input[name='school']").val(),
+          school: $("#school").val(),
           password: $("input[name='password']").val(),
           password_confirmation: $("input[name='password_confirmation']").val(),
-          department: $("input[name='department']").val(),
+          department: $("#department").val(),
           passport: $("#passport").val(),
           fingerprint: $("#fingerprintData").val()
         };

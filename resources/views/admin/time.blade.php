@@ -34,7 +34,7 @@
               <thead>
                 <tr>
                   <th>Day</th>
-                  <th>Service</th>
+                  <th>Course</th>
                   <th>Time</th>
                   <th>Actions</th>
                 </tr>
@@ -84,12 +84,7 @@
 
                         <div class="col-md-4 position-relative">
                           <label class="form-label">Service</label>
-                          <select class="form-control" name="service" required>
-                            <option>BIBLE STUDY</option>
-                            <option>MORNING DEVOTION</option>
-                            <option>DIGGING DEEP</option>
-                            <option>SUNDAY SERVICE</option>
-                          </select>
+                          <input type="text" class="form-control" name="service" placeholder="Enter Service" required>
                         </div>
 
                         <div class="col-12">
@@ -170,7 +165,7 @@ $(document).ready(function () {
     // Open modal and populate form for editing
     $(document).on('click', '.edit-btn', function () {
         const id = $(this).data('id');
-        $.get(`/schedule/${id}`, function (data) {
+        $.get(`/admin/schedule/${id}`, function (data) {
             $('select[name="day"]').val(data.day);
             $('input[name="time"]').val(data.time);
             $('select[name="service"]').val(data.service);
@@ -199,7 +194,7 @@ $(document).ready(function () {
 
         const id = $(this).attr('data-editing');
         const method = id ? 'PUT' : 'POST';
-        const url = id ? `/schedule/update/${id}` : "{{ route('schedule.store') }}";
+        const url = id ? `/admin/schedule/update/${id}` : "{{ route('schedule.store') }}";
 
         $('#registerBtn').attr('disabled', true);
         $('#btnText').hide();
@@ -236,7 +231,7 @@ $(document).ready(function () {
         const id = $(this).data('id');
         if (confirm('Are you sure to delete this schedule?')) {
             $.ajax({
-                url: `/schedule/delete/${id}`,
+                url: `/admin/schedule/delete/${id}`,
                 type: 'DELETE',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'

@@ -63,7 +63,7 @@ Route::post('/admin/attendance/mark', [AttendanceController::class, 'markAttenda
 Route::get('/attendance/export/csv', [AttendanceController::class, 'exportCsv'])->name('attendance.export.csv');
 Route::get('/attendance/export/pdf', [AttendanceController::class, 'exportPdf'])->name('attendance.export.pdf');
 
-
+Route::post('/fingerprint/capture', [App\Http\Controllers\FingerprintController::class, 'capture'])->name('fingerprint.capture');
 
 Route::get('admin/logout', [AuthController::class, 'logout'])->name('admin-logout');
 Route::middleware('auth:admin')->prefix('admin')->group(function () {

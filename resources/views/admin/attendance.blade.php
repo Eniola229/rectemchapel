@@ -13,7 +13,7 @@
         </div>
 
         <div class="d-flex justify-content-between align-items-center my-3">
-            <h4>Today's Service: {{ $time->service ?? 'None Scheduled' }}</h4>
+            <h4>Service: {{ $time->service ?? 'None Scheduled' }}</h4>
             <button class="btn btn-primary" id="scanFingerprint" {{ $attendanceClosed ? 'disabled' : '' }}>
                 <i class="bi bi-fingerprint"></i> Scan Fingerprint
             </button>

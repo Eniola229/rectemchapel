@@ -1,3 +1,15 @@
+<style>
+  /* Remove underline from sidebar links */
+#sidebar a {
+  text-decoration: none !important;
+}
+
+/* Optional: keep the text color consistent */
+#sidebar a span {
+  color: inherit;
+}
+
+</style>
 <!-- ======= Sidebar ======= -->
   <aside id="sidebar" class="sidebar">
 

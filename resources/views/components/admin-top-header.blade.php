@@ -1,7 +1,13 @@
+<style>
+  .no-underline {
+    text-decoration: none !important;
+  }
+
+</style>
 <header id="header" class="header fixed-top d-flex align-items-center">
 
     <div class="d-flex align-items-center justify-content-between">
-      <a href="index.html" class="logo d-flex align-items-center">
+      <a href="index.html" class="logo d-flex align-items-center no-underline">
         <img src="assets/img/logo.png" alt="">
         <span class="d-none d-lg-block">AUTOMATIC BIOMETRIC SYSTEM</span>
       </a>
@@ -16,10 +22,10 @@
     </div><!-- End Search Bar -->
 
     <nav class="header-nav ms-auto">
-        <li class="nav-item dropdown pe-3">
+        <li class="nav-item dropdown pe-3" style="list-style: none;">
 
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="{{ Auth::user()->avatar }}" alt="Profile" class="rounded-circle">
+            <img src="{{ Auth::user()->avatar ?? 'https://tse4.mm.bing.net/th/id/OIP.IGNf7GuQaCqz_RPq5wCkPgHaLH?rs=1&pid=ImgDetMain&o=7&rm=3' }}" alt="Profile" class="rounded-circle">
             <span class="d-none d-md-block dropdown-toggle ps-2">{{ Auth::user()->name }}</span>
           </a><!-- End Profile Iamge Icon -->
 
