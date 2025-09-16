@@ -94,33 +94,50 @@ class AttendanceController extends Controller
         }
     }
 
-    public function attendancehistory(Request $request)
-    {
-        $query = Attendance::with('student')->orderByDesc('created_at');
+public function attendancehistory(Request $request)
+{
+    $query = Attendance::with('student')->orderByDesc('created_at');
 
-        // Apply filters if provided
-        if ($request->filled('year')) {
-            $query->whereYear('created_at', $request->year);
-        }
-        if ($request->filled('month')) {
-            $query->whereMonth('created_at', $request->month);
-        }
-        if ($request->filled('date')) {
-            $query->whereDate('created_at', $request->date);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('student', function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('matric_no', 'like', "%$search%");
-            });
-        }
-
-        // Paginate results
-        $attendances = $query->paginate(10)->withQueryString();
-
-        return view('admin.attendance-history', compact('attendances'));
+    if ($request->filled('year')) {
+        $query->whereYear('created_at', $request->year);
     }
+    if ($request->filled('month')) {
+        $query->whereMonth('created_at', $request->month);
+    }
+    if ($request->filled('date')) {
+        $query->whereDate('created_at', $request->date);
+    }
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->whereHas('student', function ($q) use ($search) {
+            $q->where('name', 'like', "%$search%")
+              ->orWhere('matric_no', 'like', "%$search%");
+        });
+    }
+
+    // Get all results first
+    $all = $query->get();
+
+    // Group by service + date
+    $grouped = $all->groupBy(function ($record) {
+        return $record->service . '|' . $record->created_at->toDateString();
+    });
+
+    // Now paginate the groups (not individual rows)
+    $perPage = 10;
+    $page = request('page', 1);
+    $paged = $grouped->forPage($page, $perPage);
+
+    $attendances = new \Illuminate\Pagination\LengthAwarePaginator(
+        $paged,
+        $grouped->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
+    return view('admin.attendance-history', compact('attendances'));
+}
 
     public function exportCsv(Request $request)
 {

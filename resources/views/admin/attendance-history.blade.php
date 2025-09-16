@@ -35,48 +35,58 @@
     </div>
 
     <!-- Attendance List -->
-    <div id="attendanceList">
-        @forelse ($attendances as $record)
-            <div class="card mb-3 shadow attendance-card"
-                 data-date="{{ $record->created_at->toDateString() }}"
-                 data-year="{{ $record->created_at->format('Y') }}"
-                 data-month="{{ $record->created_at->format('n') }}"
-                 data-student="{{ strtolower($record->student->name . ' ' . $record->student->matric_no) }}">
-                 
-                <div class="card-header bg-primary text-white d-flex justify-content-between">
-                    <div>
-                        <strong>{{ $record->service }}</strong><br>
-                        <small>{{ $record->created_at->format('l, jS F Y') }}</small>
-                    </div>
-                    <div>
-                        <a href="{{ route('attendance.export.csv', ['date' => $record->created_at->toDateString(), 'service' => $record->service]) }}"
-                           class="btn btn-sm btn-light me-2">
-                            <i class="bi bi-filetype-csv"></i> CSV
-                        </a>
-                        <a href="{{ route('attendance.export.pdf', ['date' => $record->created_at->toDateString(), 'service' => $record->service]) }}"
-                           class="btn btn-sm btn-light">
-                            <i class="bi bi-file-earmark-pdf"></i> PDF
-                        </a>
-                    </div>
-                </div>
+<div id="attendanceList">
+    @forelse ($attendances as $groupKey => $records)
+        @php
+            [$service, $date] = explode('|', $groupKey);
+            $first = $records->first();
+        @endphp
 
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>{{ $record->student->name }}</strong>
-                        <span class="text-muted">({{ $record->student->matric_no }})</span><br>
-                        <small class="text-secondary">
-                            Marked at {{ $record->created_at->format('h:i A') }}
-                        </small>
-                    </div>
-                    <span class="badge {{ $record->is_late ? 'bg-warning' : 'bg-success' }}">
-                        {{ $record->is_late ? 'Late' : 'On Time' }}
-                    </span>
+        <div class="card mb-3 shadow attendance-card"
+             data-date="{{ $date }}"
+             data-year="{{ $first->created_at->format('Y') }}"
+             data-month="{{ $first->created_at->format('n') }}"
+             data-student="{{ strtolower($records->pluck('student.name')->join(' ')) }}">
+             
+            <div class="card-header bg-primary text-white d-flex justify-content-between">
+                <div>
+                    <strong>{{ $service }}</strong><br>
+                    <small>{{ \Carbon\Carbon::parse($date)->format('l, jS F Y') }}</small>
+                </div>
+                <div>
+                    <a href="{{ route('attendance.export.csv', ['date' => $date, 'service' => $service]) }}"
+                       class="btn btn-sm btn-light me-2">
+                        <i class="bi bi-filetype-csv"></i> CSV
+                    </a>
+                    <a href="{{ route('attendance.export.pdf', ['date' => $date, 'service' => $service]) }}"
+                       class="btn btn-sm btn-light">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
                 </div>
             </div>
-        @empty
-            <div class="alert alert-info">No attendance records available.</div>
-        @endforelse
-    </div>
+
+            <div class="card-body">
+                @foreach ($records as $record)
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>{{ $record->student->name }}</strong>
+                            <span class="text-muted">({{ $record->student->matric_no }})</span><br>
+                            <small class="text-secondary">
+                                Marked at {{ $record->created_at->format('h:i A') }}
+                            </small>
+                        </div>
+                        <span class="badge {{ $record->is_late ? 'bg-warning' : 'bg-success' }}">
+                            {{ $record->is_late ? 'Late' : 'On Time' }}
+                        </span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @empty
+        <div class="alert alert-info">No attendance records available.</div>
+    @endforelse
+</div>
+
 
     <!-- Pagination -->
     <div class="d-flex justify-content-center mt-4">
