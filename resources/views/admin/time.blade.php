@@ -8,11 +8,11 @@
 <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>TIME DATA</h1>
+      <h1>SCHEDULE</h1>
       <nav>
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-          <li class="breadcrumb-item active">TIME</li>
+          <li class="breadcrumb-item active">SCHEDULE</li>
         </ol>
       </nav>
     </div><!-- End Page Title -->
@@ -24,9 +24,9 @@
           <div class="card">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center">
-                  <h5 class="card-title mb-0">All TIME</h5>
+                  <h5 class="card-title mb-0">All SCHEDULE</h5>
                   <a class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#fullscreenModal">
-                      <i class="bi bi-plus"></i> Take TIME
+                      <i class="bi bi-plus"></i> ADD SCHEDULE
                   </a>
               </div>
 
@@ -34,8 +34,8 @@
               <thead>
                 <tr>
                   <th>Day</th>
-                  <th>Course</th>
-                  <th>Time</th>
+                  <th>Service</th>
+                  <th>Start Time</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -78,7 +78,7 @@
                         </div>
 
                         <div class="col-md-4 position-relative">
-                          <label class="form-label">Time</label>
+                          <label class="form-label">Start Time</label>
                           <input type="time" class="form-control" name="time" required>
                         </div>
 

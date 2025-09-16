@@ -66,53 +66,57 @@
         });
     }
 
-    document.getElementById('scanFingerprint')?.addEventListener('click', () => {
-        const now = new Date();
-        if (now > deadline) {
-            Swal.fire('Attendance Closed', 'Late submission not allowed', 'error');
+  document.getElementById('scanFingerprint')?.addEventListener('click', () => {
+    const now = new Date();
+    if (now > deadline) {
+        Swal.fire('Attendance Closed', 'Late submission not allowed', 'error');
+        return;
+    }
+
+    // filter out already marked students
+    const availableStudents = students.filter(s => !presentStudents.has(s.id));
+
+    if (availableStudents.length === 0) {
+        Swal.fire('Done', 'All students have been marked!', 'success');
+        return;
+    }
+
+    // pick random only from available
+    const random = availableStudents[Math.floor(Math.random() * availableStudents.length)];
+
+    fetch('{{ route('attendance.mark') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            fingerprint: random.fingerprint,
+            service: serviceName,
+            service_time: deadline.toISOString()
+        })
+    })
+    .then(async res => {
+        const data = await res.json().catch(() => ({ error: 'Invalid JSON from server' }));
+
+        if (!res.ok || data.error) {
+            Swal.fire('Error', data.error || 'Something went wrong', 'error');
             return;
         }
 
-        const random = students[Math.floor(Math.random() * students.length)];
+        Swal.fire(
+            data.is_late ? 'Marked Late' : 'Marked Present',
+            `${data.student.name} marked ${data.is_late ? 'late' : 'on time'}`,
+            data.is_late ? 'warning' : 'success'
+        );
 
-        if (presentStudents.has(random.id)) {
-            Swal.fire('Already Marked', `${random.name} already marked`, 'info');
-            return;
-        }
-
-        fetch('{{ route('attendance.mark') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                fingerprint: random.fingerprint,
-                service: serviceName,
-                service_time: deadline.toISOString()
-            })
-        })
-        .then(async res => {
-            const data = await res.json().catch(() => ({ error: 'Invalid JSON from server' }));
-
-            if (!res.ok || data.error) {
-                Swal.fire('Error', data.error || 'Something went wrong', 'error');
-                return;
-            }
-
-            Swal.fire(
-                data.is_late ? 'Marked Late' : 'Marked Present',
-                `${data.student.name} marked ${data.is_late ? 'late' : 'on time'}`,
-                data.is_late ? 'warning' : 'success'
-            );
-
-            presentStudents.add(data.student.id);
-            updateLists();
-        })
-        .catch(err => {
-            Swal.fire('Network Error', err.message, 'error');
-        });
+        presentStudents.add(data.student.id);
+        updateLists();
+    })
+    .catch(err => {
+        Swal.fire('Network Error', err.message, 'error');
     });
+});
 
     setInterval(() => {
         const status = document.getElementById('status');

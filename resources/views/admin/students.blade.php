@@ -101,7 +101,18 @@
             <div class="col-md-4">
               <select class="form-control" id="department" name="department" required>
                 <option value="">-- Select Department --</option>
-                <option value="Computer Science">Computer Science</option>
+               <option value="Computer Science">Computer Science</option>
+                <option value="Electrical/Electronic Engineering">Electrical/Electronic Engineering</option>
+                <option value="Civil Engineering">Civil Engineering</option>
+                <option value="Architecture">Architecture</option>
+                <option value="Business Administration">Business Administration</option>
+                <option value="Accountancy">Accountancy</option>
+                <option value="Science Laboratory Technology">Science Laboratory Technology</option>
+                <option value="Fine and Applied Arts">Fine & Applied Arts</option>
+                <option value="Agricultural Technology">Agricultural Technology</option>
+                <option value="Computer Engineering">Computer Engineering</option>
+                <option value="Estate Management">Estate Management</option>
+                <option value="Quantity Surveying">Quantity Surveying</option>
               </select>
             </div>
 
@@ -109,6 +120,9 @@
               <select class="form-control" id="school" name="school" required>
                 <option value="">-- Select School --</option>
                 <option value="science">School of Science</option>
+                <option value="engineering">School of Engineering</option>
+                <option value="business">School of Business & Management Studies</option>
+                <option value="environmental">School of Environmental Studies</option>
               </select>
             </div>
 
@@ -135,11 +149,18 @@
               <div id="fingerprintMessage" class="mt-2"></div>
             </div>
 
+            <!-- Add a preview image element somewhere near your preview -->
+<div id="fingerprintPreviewWrap" style="display:flex;gap:12px;align-items:center;">
+  <img id="fingerprintImg" alt="Fingerprint preview" style="width:160px;height:240px;object-fit:cover;border:1px solid #e1e1e1;display:none;">
+  <pre id="fingerprintPreview" style="background:#f8f9fa;padding:10px;max-width:420px;white-space:pre-wrap;word-break:break-all;"></pre>
+</div>
+
+
             <!-- Debug Preview -->
-            <div class="col-12">
+         <!--    <div class="col-12">
               <label class="form-label">Preview:</label>
               <pre id="fingerprintPreview" style="background:#f8f9fa;padding:10px;"></pre>
-            </div>
+            </div> -->
 
             <div class="text-center">
               <button type="submit" id="registerBtn" class="btn btn-success">
@@ -194,27 +215,27 @@
       // ---------------------------
       // Fingerprint Capture Functions
       // ---------------------------
-      $('#fingerprintBtn').on('click', function () {
-        $('#fingerprintMessage').html('Capturing fingerprint...');
+      // $('#fingerprintBtn').on('click', function () {
+      //   $('#fingerprintMessage').html('Capturing fingerprint...');
 
-        $.ajax({
-          url: '/fingerprint/capture',
-          type: 'POST',
-          data: {_token: '{{ csrf_token() }}'},
-          success: function(response) {
-            if (response.success) {
-              $('#fingerprintData').val(response.data);
-              $('#fingerprintPreview').text(response.data);
-              $('#fingerprintMessage').html('<span class="text-success">' + response.message + '</span>');
-            } else {
-              $('#fingerprintMessage').html('<span class="text-danger">' + response.message + '</span>');
-            }
-          },
-          error: function(xhr) {
-            $('#fingerprintMessage').html('<span class="text-danger">Error: ' + xhr.responseJSON.message + '</span>');
-          }
-        });
-      });
+      //   $.ajax({
+      //     url: '/fingerprint/capture',
+      //     type: 'POST',
+      //     data: {_token: '{{ csrf_token() }}'},
+      //     success: function(response) {
+      //       if (response.success) {
+      //         $('#fingerprintData').val(response.data);
+      //         $('#fingerprintPreview').text(response.data);
+      //         $('#fingerprintMessage').html('<span class="text-success">' + response.message + '</span>');
+      //       } else {
+      //         $('#fingerprintMessage').html('<span class="text-danger">' + response.message + '</span>');
+      //       }
+      //     },
+      //     error: function(xhr) {
+      //       $('#fingerprintMessage').html('<span class="text-danger">Error: ' + xhr.responseJSON.message + '</span>');
+      //     }
+      //   });
+      // });
 
       // ---------------------------
       // Form Submission Handler
@@ -364,6 +385,128 @@ $(document).ready(function() {
     });
 });
 
+// realistic mock fingerprint generator + click handler
+(function () {
+  // Generate a pseudo-real fingerprint PNG as a dataURL
+  function generateFakeFingerprintDataUrl(width = 320, height = 480) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    // background
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(0, 0, width, height);
+
+    // base smudge
+    const grd = ctx.createLinearGradient(0, 0, 0, height);
+    grd.addColorStop(0, '#f5f5f6');
+    grd.addColorStop(1, '#ededee');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, width, height);
+
+    // fingerprint parameters
+    const centerX = width / 2 + (Math.random() - 0.5) * 20;
+    const centerY = height * 0.45 + (Math.random() - 0.5) * 30;
+    const maxRadius = Math.min(width, height) * 0.45;
+    const loops = 28 + Math.floor(Math.random() * 8); // number of ridges
+    const jitter = 6; // jitter amount
+    const baseAlpha = 0.14;
+
+    // draw many arcs/curves to simulate ridges
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < loops; i++) {
+      const radius = (i / loops) * maxRadius + 6;
+      const points = 90; // resolution of the curve
+      ctx.beginPath();
+      for (let p = 0; p <= points; p++) {
+        // angle runs across semicircle-ish, but we create oval loops
+        const t = (p / points) * Math.PI * 2;
+        // make fingerprint-style elongated loops by scaling y
+        const x = centerX + Math.cos(t) * (radius + Math.sin(i * 0.6 + p * 0.2) * (jitter * 0.3));
+        const y = centerY + Math.sin(t) * (radius * 0.65 + Math.cos(i * 0.4 + p * 0.3) * (jitter * 0.25));
+        if (p === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      // stroke with slight darkness variation per loop
+      ctx.strokeStyle = `rgba(15,15,15,${(baseAlpha + Math.random() * 0.06).toFixed(3)})`;
+      ctx.stroke();
+    }
+
+    // add finer short strokes to mimic friction ridges
+    ctx.lineWidth = 0.8;
+    for (let s = 0; s < 1200; s++) {
+      const rx = Math.random() * width;
+      const ry = Math.random() * height;
+      const len = 4 + Math.random() * 12;
+      const ang = (Math.random() - 0.5) * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(rx + Math.cos(ang) * len, ry + Math.sin(ang) * len);
+      ctx.strokeStyle = `rgba(20,20,20,${(0.02 + Math.random() * 0.06).toFixed(3)})`;
+      ctx.stroke();
+    }
+
+    // subtle gaussian-like blur imitation: draw translucent white and black overlay
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(0,0,0,0.02)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalCompositeOperation = 'source-over';
+
+    // add noise (grain)
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * 20; // noise intensity
+      d[i] = Math.min(255, Math.max(0, d[i] + n));
+      d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
+      d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
+      // keep alpha
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    // vignette to give depth
+    const vGrad = ctx.createRadialGradient(centerX, centerY, maxRadius * 0.2, centerX, centerY, maxRadius * 1.1);
+    vGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    vGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+    ctx.fillStyle = vGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // finalize
+    return canvas.toDataURL('image/png');
+  }
+
+  // click handler - generates mock fingerprint and fills input + preview
+$('#fingerprintBtn').off('click').on('click', function () {
+  $('#fingerprintMessage').html('Capturing fingerprint...');
+
+  // mimic real capture time (0.8s - 1.6s)
+  const wait = 800 + Math.floor(Math.random() * 900);
+
+  setTimeout(() => {
+    const dataUrl = generateFakeFingerprintDataUrl(320, 480);
+    const base64 = dataUrl.split(',')[1]; // full PNG base64
+
+    // TRUNCATE base64 to 200 chars (per your request)
+    const truncatedBase64 = base64.length > 200 ? base64.substring(0, 200) : base64;
+
+    // store only truncated base64 in hidden input
+    $('#fingerprintData').val(truncatedBase64);
+
+    // show image preview (full image for UX)
+    $('#fingerprintImg').attr('src', dataUrl).show();
+
+    // show truncated preview text (200 chars)
+    $('#fingerprintPreview').text(truncatedBase64 + (base64.length > 200 ? '...' : ''));
+
+    $('#fingerprintMessage').html('<span class="text-success">Fingerprint captured successfully 100% captured.</span>');
+  }, wait);
+});
+
+})();
 
 
 </script>

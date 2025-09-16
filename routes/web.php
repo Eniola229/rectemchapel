@@ -65,7 +65,7 @@ Route::get('/attendance/export/pdf', [AttendanceController::class, 'exportPdf'])
 
 Route::post('/fingerprint/capture', [App\Http\Controllers\FingerprintController::class, 'capture'])->name('fingerprint.capture');
 
-Route::get('admin/logout', [AuthController::class, 'logout'])->name('admin-logout');
+Route::post('admin/logout', [AuthController::class, 'logout'])->name('admin-logout');
 Route::middleware('auth:admin')->prefix('admin')->group(function () {
  Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('admin-dashboard'); 
  Route::get('/students', [StudentController::class, 'index'])->name('admin-students'); 

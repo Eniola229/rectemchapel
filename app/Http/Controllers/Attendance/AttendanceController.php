@@ -94,21 +94,32 @@ class AttendanceController extends Controller
         }
     }
 
-    public function attendancehistory()
+    public function attendancehistory(Request $request)
     {
-        $attendances = Attendance::with('student')
-            ->orderByDesc('created_at')
-            ->get()
-            ->groupBy(function ($record) {
-                return $record->created_at->toDateString(); // Group by date
-            })
-            ->map(function ($daily) {
-                return $daily->groupBy('service'); // Then by service
-            });
+        $query = Attendance::with('student')->orderByDesc('created_at');
 
-        return view('admin.attendance-history', [
-            'attendanceByDate' => $attendances
-        ]);
+        // Apply filters if provided
+        if ($request->filled('year')) {
+            $query->whereYear('created_at', $request->year);
+        }
+        if ($request->filled('month')) {
+            $query->whereMonth('created_at', $request->month);
+        }
+        if ($request->filled('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('student', function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('matric_no', 'like', "%$search%");
+            });
+        }
+
+        // Paginate results
+        $attendances = $query->paginate(10)->withQueryString();
+
+        return view('admin.attendance-history', compact('attendances'));
     }
 
     public function exportCsv(Request $request)

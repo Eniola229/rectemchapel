@@ -37,7 +37,7 @@
             <li>
               <hr class="dropdown-divider">
             </li>
-
+<!-- 
             <li>
               <a class="dropdown-item d-flex align-items-center" href="{{ url('/profile') }}">
                 <i class="bi bi-person"></i>
@@ -61,7 +61,7 @@
             <li>
               <hr class="dropdown-divider">
             </li>
-
+ -->
               <li>
                   <form action="{{ url('admin/logout') }}" method="POST">
                       @csrf

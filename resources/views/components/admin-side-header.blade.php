@@ -34,7 +34,7 @@
       <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
             <a href="{{ url('admin/attendance') }}">
-              <i class="bi bi-circle"></i><span>Attendance</span>
+              <i class="bi bi-circle"></i><span>Mark Attendance</span>
             </a>
           </li>
            <li>
@@ -44,7 +44,7 @@
           </li>
            <li>
             <a href="{{ url('admin/time') }}">
-              <i class="bi bi-circle"></i><span>Time</span>
+              <i class="bi bi-circle"></i><span>Schedule</span>
             </a>
           </li>
         </ul>
