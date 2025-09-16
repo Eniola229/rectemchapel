@@ -34,11 +34,21 @@
         </div>
     </div>
 
+    <!-- Summary -->
+    <div class="card mb-4 shadow-sm p-3" id="summaryCard">
+        <h5>Summary</h5>
+        <p>Total Present: <span id="presentCount">0</span></p>
+        <p>Total Late: <span id="lateCount">0</span></p>
+        <p>Total Absent: <span id="absentCount">0</span></p>
+    </div>
+
     <!-- Attendance List -->
 <div id="attendanceList">
     @forelse ($attendances as $groupKey => $records)
         @php
-            [$service, $date] = explode('|', $groupKey);
+            $parts = explode('|', $groupKey);
+            $service = $parts[0] ?? 'Unknown';
+            $date = $parts[1] ?? now()->toDateString();
             $first = $records->first();
         @endphp
 
@@ -67,7 +77,9 @@
 
             <div class="card-body">
                 @foreach ($records as $record)
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2"
+                         data-status="{{ $record->is_late ? 'late' : 'present' }}"
+                         data-student="{{ strtolower($record->student->name) }}">
                         <div>
                             <strong>{{ $record->student->name }}</strong>
                             <span class="text-muted">({{ $record->student->matric_no }})</span><br>
@@ -87,7 +99,6 @@
     @endforelse
 </div>
 
-
     <!-- Pagination -->
     <div class="d-flex justify-content-center mt-4">
         {{ $attendances->links() }}
@@ -106,32 +117,69 @@ document.addEventListener("DOMContentLoaded", function () {
     const searchInput = document.getElementById("searchInput");
     const cards = document.querySelectorAll(".attendance-card");
 
+    const presentCountEl = document.getElementById("presentCount");
+    const lateCountEl = document.getElementById("lateCount");
+    const absentCountEl = document.getElementById("absentCount");
+
     function filterAttendance() {
         const year = yearFilter.value;
         const month = monthFilter.value;
         const date = dateFilter.value;
         const search = searchInput.value.toLowerCase();
 
+        let totalPresent = 0;
+        let totalLate = 0;
+        let totalAbsent = 0;
+
         cards.forEach(card => {
             const cardYear = card.dataset.year;
             const cardMonth = card.dataset.month;
             const cardDate = card.dataset.date;
-            const student = card.dataset.student;
 
-            let visible = true;
+            let cardVisible = true;
 
-            if (year && cardYear !== year) visible = false;
-            if (month && cardMonth !== month) visible = false;
-            if (date && cardDate !== date) visible = false;
-            if (search && !student.includes(search)) visible = false;
+            if (year && cardYear !== year) cardVisible = false;
+            if (month && cardMonth !== month) cardVisible = false;
+            if (date && cardDate !== date) cardVisible = false;
 
-            card.style.display = visible ? "block" : "none";
+            let anyStudentVisible = false;
+
+            // loop through students inside this card
+            card.querySelectorAll("[data-status]").forEach(row => {
+                const studentName = row.dataset.student;
+                let rowVisible = true;
+
+                if (search && !studentName.includes(search)) {
+                    rowVisible = false;
+                }
+
+                row.style.display = rowVisible ? "flex" : "none";
+
+                if (rowVisible) {
+                    anyStudentVisible = true;
+                    if (row.dataset.status === "present") totalPresent++;
+                    if (row.dataset.status === "late") totalLate++;
+                }
+            });
+
+            // show card only if it passes filters AND has at least one matching student
+            card.style.display = (cardVisible && anyStudentVisible) ? "block" : "none";
         });
+
+        // Absent (needs total students from backend, set to 0 for now)
+        totalAbsent = 0;
+
+        presentCountEl.textContent = totalPresent;
+        lateCountEl.textContent = totalLate;
+        absentCountEl.textContent = totalAbsent;
     }
 
     yearFilter.addEventListener("change", filterAttendance);
     monthFilter.addEventListener("change", filterAttendance);
     dateFilter.addEventListener("change", filterAttendance);
     searchInput.addEventListener("keyup", filterAttendance);
+
+    filterAttendance();
 });
 </script>
+
