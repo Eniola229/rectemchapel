@@ -60,6 +60,8 @@ Route::post('post/login', [AuthController::class, 'postLogin'])->name('admin-log
 
 Route::get('/admin/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
 Route::post('/admin/attendance/mark', [AttendanceController::class, 'markAttendance'])->name('attendance.mark');
+Route::post('/attendance/checkout', [AttendanceController::class, 'checkout'])->name('attendance.checkout');
+
 Route::get('/attendance/export/csv', [AttendanceController::class, 'exportCsv'])->name('attendance.export.csv');
 Route::get('/attendance/export/pdf', [AttendanceController::class, 'exportPdf'])->name('attendance.export.pdf');
 

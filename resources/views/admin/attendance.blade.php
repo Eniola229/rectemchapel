@@ -1,5 +1,4 @@
 @include('components.admin-header')
-
 @include('components.admin-top-header')
 @include('components.admin-side-header')
 
@@ -14,9 +13,17 @@
 
         <div class="d-flex justify-content-between align-items-center my-3">
             <h4>Service: {{ $time->service ?? 'None Scheduled' }}</h4>
-            <button class="btn btn-primary" id="scanFingerprint" {{ $attendanceClosed ? 'disabled' : '' }}>
-                <i class="bi bi-fingerprint"></i> Scan Fingerprint
-            </button>
+            <div>
+                <button class="btn btn-primary" id="scanFingerprint" {{ $attendanceClosed ? 'disabled' : '' }}>
+                    <i class="bi bi-fingerprint"></i> <span id="scanText">Scan Fingerprint</span>
+                </button>
+
+                <button class="btn btn-warning" id="checkoutBtn" {{ $attendanceClosed ? 'disabled' : '' }}>
+                    <i class="bi bi-box-arrow-right"></i> Checkout
+                </button>
+
+                <p id="scanStatus" class="mt-2"></p>
+            </div>
         </div>
 
         <div class="row">
@@ -26,6 +33,7 @@
                     <ul class="list-group list-group-flush" id="presentList"></ul>
                 </div>
             </div>
+
             <div class="col-md-6">
                 <div class="card shadow-sm">
                     <div class="card-header bg-danger text-white">Absent Students</div>
@@ -35,28 +43,35 @@
         </div>
     </div>
 </main>
- 
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
-    const students = @json($students);
-    const presentIds = @json($presentIds); // From backend
-    const serviceTime = @json($time);
-    const deadline = new Date(`{{ now()->format('Y-m-d') }}T${serviceTime?.time ?? '23:59'}`);
-    const serviceName = serviceTime?.service ?? 'Unknown';
+document.addEventListener('DOMContentLoaded', () => {
+    const scanBtn = document.getElementById('scanFingerprint');
+    const scanText = document.getElementById('scanText');
+    const scanStatus = document.getElementById('scanStatus');
+    const checkoutBtn = document.getElementById('checkoutBtn');
 
-    let presentStudents = new Set(presentIds);
+    const presentStudents = new Set(@json($presentIds));
+    const students = @json($students);
 
     function updateLists() {
         const presentList = document.getElementById('presentList');
         const absentList = document.getElementById('absentList');
+
         presentList.innerHTML = '';
         absentList.innerHTML = '';
 
+        if (!students.length) {
+            presentList.innerHTML = '<li class="list-group-item">No students available</li>';
+            absentList.innerHTML = '<li class="list-group-item">No students available</li>';
+            return;
+        }
+
         students.forEach(student => {
             const li = document.createElement('li');
-            li.className = 'list-group-item';
-            li.textContent = `${student.name} (${student.matric_no})`;
+            li.classList.add('list-group-item');
+            li.textContent = student.name;
 
             if (presentStudents.has(student.id)) {
                 presentList.appendChild(li);
@@ -66,68 +81,130 @@
         });
     }
 
-  document.getElementById('scanFingerprint')?.addEventListener('click', () => {
-    const now = new Date();
-    if (now > deadline) {
-        Swal.fire('Attendance Closed', 'Late submission not allowed', 'error');
-        return;
-    }
+    updateLists();
 
-    // filter out already marked students
-    const availableStudents = students.filter(s => !presentStudents.has(s.id));
+    // MARK ATTENDANCE
+    scanBtn.addEventListener('click', async () => {
+        scanBtn.disabled = true;
+        scanText.textContent = 'Scanning...';
+        scanStatus.innerHTML = '<span class="text-info">Capturing fingerprint...</span>';
 
-    if (availableStudents.length === 0) {
-        Swal.fire('Done', 'All students have been marked!', 'success');
-        return;
-    }
+        try {
+            const captureRes = await fetch('{{ route("fingerprint.capture") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({})
+            });
+            const captureData = await captureRes.json();
 
-    // pick random only from available
-    const random = availableStudents[Math.floor(Math.random() * availableStudents.length)];
+            if (!captureData.success) {
+                scanStatus.innerHTML = `<span class="text-danger">${captureData.message}</span>`;
+                scanBtn.disabled = false;
+                scanText.textContent = 'Scan Fingerprint';
+                return;
+            }
 
-    fetch('{{ route('attendance.mark') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({
-            fingerprint: random.fingerprint,
-            service: serviceName,
-            service_time: deadline.toISOString()
-        })
-    })
-    .then(async res => {
-        const data = await res.json().catch(() => ({ error: 'Invalid JSON from server' }));
+            const fingerprintBase64 = captureData.data;
 
-        if (!res.ok || data.error) {
-            Swal.fire('Error', data.error || 'Something went wrong', 'error');
-            return;
+            const markRes = await fetch('{{ route("attendance.mark") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    fingerprint: fingerprintBase64,
+                    service: '{{ $time->service ?? "" }}',
+                    service_time: '{{ $time->time ?? "" }}'
+                })
+            });
+
+            const markData = await markRes.json();
+
+            if (markData.error) {
+                scanStatus.innerHTML = `<span class="text-danger">${markData.error}</span>`;
+                Swal.fire('Error', markData.error, 'error');
+            } else {
+                const student = markData.student;
+                const statusText = markData.is_late ? 'Late' : 'Present';
+                scanStatus.innerHTML = `<span class="text-success">${student.name} marked ${statusText}</span>`;
+                Swal.fire('Success', `${student.name} marked ${statusText}`, 'success');
+
+                presentStudents.add(student.id);
+                updateLists();
+            }
+
+        } catch (err) {
+            scanStatus.innerHTML = `<span class="text-danger">Network error: ${err.message}</span>`;
+            Swal.fire('Error', `Network error: ${err.message}`, 'error');
+        } finally {
+            scanBtn.disabled = false;
+            scanText.textContent = 'Scan Fingerprint';
         }
-
-        Swal.fire(
-            data.is_late ? 'Marked Late' : 'Marked Present',
-            `${data.student.name} marked ${data.is_late ? 'late' : 'on time'}`,
-            data.is_late ? 'warning' : 'success'
-        );
-
-        presentStudents.add(data.student.id);
-        updateLists();
-    })
-    .catch(err => {
-        Swal.fire('Network Error', err.message, 'error');
     });
-});
 
-    setInterval(() => {
-        const status = document.getElementById('status');
-        if (new Date() > deadline) {
-            status.classList.replace('bg-success', 'bg-danger');
-            status.textContent = 'Attendance Closed';
-            document.getElementById('scanFingerprint')?.setAttribute('disabled', 'true');
+    // CHECKOUT
+    checkoutBtn.addEventListener('click', async () => {
+        checkoutBtn.disabled = true;
+        checkoutBtn.textContent = 'Scanning...';
+
+        try {
+            const captureRes = await fetch('{{ route("fingerprint.capture") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({})
+            });
+            const captureData = await captureRes.json();
+
+            if (!captureData.success) {
+                scanStatus.innerHTML = `<span class="text-danger">${captureData.message}</span>`;
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'Checkout';
+                return;
+            }
+
+            const fingerprintBase64 = captureData.data;
+
+            const res = await fetch('{{ route("attendance.checkout") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    fingerprint: fingerprintBase64,
+                    service: '{{ $time->service ?? "" }}',
+                    service_time: '{{ $time->time ?? "" }}'
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.error) {
+                Swal.fire('Error', data.error, 'error');
+                scanStatus.innerHTML = `<span class="text-danger">${data.error}</span>`;
+            } else {
+                const student = data.student;
+                scanStatus.innerHTML = `<span class="text-success">${student.name} checked out successfully</span>`;
+                Swal.fire('Success', `${student.name} checked out`, 'success');
+            }
+
+        } catch (err) {
+            scanStatus.innerHTML = `<span class="text-danger">Network error: ${err.message}</span>`;
+            Swal.fire('Error', `Network error: ${err.message}`, 'error');
+        } finally {
+            checkoutBtn.disabled = false;
+            checkoutBtn.textContent = 'Checkout';
         }
-    }, 1000);
+    });
 
-    window.addEventListener('DOMContentLoaded', updateLists);
+});
 </script>
 
 @include('components.admin-footer')

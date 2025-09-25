@@ -11,6 +11,7 @@ use Hash;
 use Illuminate\View\View;
 use App\Models\Student;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\Http;
 
 class StudentController extends Controller
 {
@@ -23,45 +24,70 @@ class StudentController extends Controller
 public function store(Request $request)
 {
     $request->validate([
-        'name' => 'required|string|max:255',
-        'passport' => 'required|string', // Base64 image string
-        'fingerprint' => 'required|string', // Fingerprint data (base64 or template)
-        'matric_no' => 'required|string|max:50|unique:students,matric_no',
-        'email' => 'required|email|unique:students,email',
+        'name'       => 'required|string|max:255',
+        'passport'   => 'required|string', // Base64 image string
+        'fingerprint'=> 'required|string', // Base64 fingerprint image
+        'matric_no'  => 'required|string|max:50|unique:students,matric_no',
+        'email'      => 'required|email|unique:students,email',
         'department' => 'required|string|max:255',
-        'school' => 'required|string|max:255',
-        'password' => 'required|string|min:6|confirmed',
+        'school'     => 'required|string|max:255',
+        'password'   => 'required|string|min:6|confirmed',
     ]);
 
-    // Handle Passport image upload to Cloudinary (same as before)
+    // --- Upload Passport to Cloudinary ---
     $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $request->passport));
     $tempFilePath = tempnam(sys_get_temp_dir(), 'passport_') . '.jpg';
     file_put_contents($tempFilePath, $imageData);
 
-    $uploadedFile = Cloudinary::upload($tempFilePath, [
-        'folder' => 'passport',
-    ]);
+    $uploadedFile = Cloudinary::upload($tempFilePath, ['folder' => 'passport']);
+    $uploadedFileUrl = $uploadedFile->getSecurePath();
+    $publicId = $uploadedFile->getPublicId();
 
-    $uploadedFileUrl = $uploadedFile->getSecurePath(); // The image URL
-    $publicId = $uploadedFile->getPublicId(); // The public ID
+    // --- Enroll Fingerprint via SourceAFIS (.NET API) ---
+// --- Enroll Fingerprint via SourceAFIS (.NET API) ---
+    try {
+        $response = Http::post('http://localhost:5140/api/fingerprint/enroll', [
+            'FingerprintImage' => $request->fingerprint
+        ]);
 
-    // Process the fingerprint (store it as-is, or hash it)
-    $fingerprintData = $request->fingerprint; // This could be base64 or a template
+        if (!$response->successful()) {
+            return response()->json([
+                'error' => 'Failed to process fingerprint enrollment.',
+                'details' => $response->body()
+            ], 500);
+        }
 
-    // Store data in the database
+        $fingerprintTemplate = $response->json('fingerprint'); // ✅ real extracted template
+
+        if (!$fingerprintTemplate) {
+            return response()->json(['error' => 'No fingerprint data returned.'], 500);
+        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Fingerprint API unavailable',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+
+
+    // --- Store Student in Database ---
     $user = Student::create([
-        'name' => $request->name,
-        'passport' => $uploadedFileUrl,
-        'passport_id' => $publicId,
-        'matric_no' => $request->matric_no,
-        'email' => $request->email,
+        'name'       => $request->name,
+        'passport'   => $uploadedFileUrl,
+        'passport_id'=> $publicId,
+        'matric_no'  => $request->matric_no,
+        'email'      => $request->email,
         'department' => $request->department,
-        'school' => $request->school,
-        'password' => Hash::make($request->password),
-        'fingerprint' => $fingerprintData, // Store fingerprint data
+        'school'     => $request->school,
+        'password'   => Hash::make($request->password),
+        'fingerprint'=> $fingerprintTemplate, // ✅ store SourceAFIS fingerprint string
     ]);
 
-    return response()->json(['success' => 'Student registered successfully!'], 200);
+    return response()->json([
+        'success' => true,
+        'message' => 'Student registered successfully!',
+        'student' => $user
+    ], 200);
 }
 
 public function show($id)

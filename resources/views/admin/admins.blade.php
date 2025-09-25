@@ -93,7 +93,7 @@
                                         <label class="form-label">Role</label>
                                         <select class="form-control" name="role" required>
                                             <option value="" disabled selected>Select a role</option>
-                                            <option value="admin">ADMIN</option>
+                                            <option value="admin">USER</option>
                                             <option value="super">SUPER</option>
                                         </select>
                                     </div>
@@ -180,7 +180,7 @@ $(document).ready(function () {
         var formData = {
             name: $("input[name='name']").val(),
             email: $("input[name='email']").val(),
-            role: $("input[name='role']").val(),
+            role: $("select[name='role']").val(),
             password: $("input[name='password']").val(),
             password_confirmation: $("input[name='password_confirmation']").val(),
             passport: $("#passport").val()

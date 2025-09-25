@@ -3,57 +3,38 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Log;
 
 
 class FingerprintController extends Controller
 {
-
 public function capture()
 {
-    $exePath = base_path('fingerprint/FutronicCapture.exe');
-    $workingDir = base_path('fingerprint');
-    $dotnetCache = storage_path('dotnet_cache');
+    set_time_limit(300);
 
-    if (!file_exists($dotnetCache)) {
-        mkdir($dotnetCache, 0777, true);
+    $pythonPath = 'C:\Users\Admin\AppData\Local\Programs\Python\Python313-32\python.exe'; 
+    $scriptPath = base_path('fingerprint/fingerprint_capture.py');
+    $outputPath = base_path('fingerprint/fingerprint_output.json');
+
+    // Clean previous output
+    if (file_exists($outputPath)) {
+        @unlink($outputPath);
     }
 
-    $process = new Process([$exePath]);
-    $process->setWorkingDirectory($workingDir);
-    $process->setEnv([
-        'DOTNET_BUNDLE_EXTRACT_BASE_DIR' => $dotnetCache
-    ]);
-    $process->setTimeout(30);
+    // Run Python synchronously
+    exec("\"{$pythonPath}\" \"{$scriptPath}\"", $output, $return_var);
 
-    try {
-        $process->mustRun();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Fingerprint captured successfully.',
-            'output'  => $process->getOutput(),
-        ]);
-    } catch (\Exception $e) {
-        // Build full error report
-        $errorReport = "Fingerprint capture failed:\n"
-            . "Message: " . $e->getMessage() . "\n"
-            . "Exit Code: " . $process->getExitCode() . " (" . $process->getExitCodeText() . ")\n"
-            . "Working Dir: " . $workingDir . "\n"
-            . "Exe Path: " . $exePath . "\n"
-            . "=== STDOUT ===\n" . $process->getOutput() . "\n"
-            . "=== STDERR ===\n" . $process->getErrorOutput();
-
-        // Log full details to storage/logs/laravel.log
-        Log::error($errorReport);
-
+    if ($return_var !== 0 || !file_exists($outputPath)) {
         return response()->json([
             'success' => false,
-            'message' => 'Fingerprint capture failed. Check logs for details.',
+            'message' => 'Fingerprint capture failed'
         ]);
     }
+
+    $result = json_decode(file_get_contents($outputPath), true);
+    return response()->json($result);
 }
+
 
 
 }

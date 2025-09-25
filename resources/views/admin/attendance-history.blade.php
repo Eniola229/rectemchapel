@@ -83,8 +83,11 @@
                         <div>
                             <strong>{{ $record->student->name }}</strong>
                             <span class="text-muted">({{ $record->student->matric_no }})</span><br>
-                            <small class="text-secondary">
-                                Marked at {{ $record->created_at->format('h:i A') }}
+                            <small class="text-secondary" style="color: green;">
+                                Marked at {{ $record->created_at->format('h:i A') }} | 
+                            </small>
+                            <small class="text-secondary" style="color: red;">
+                                Checked Out at {{ $record->checked_out_at }}
                             </small>
                         </div>
                         <span class="badge {{ $record->is_late ? 'bg-warning' : 'bg-success' }}">

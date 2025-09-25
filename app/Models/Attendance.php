@@ -35,6 +35,7 @@ class Attendance extends Model
         'service',
         'time_marked',
         'is_late',
+        'checked_out_at',
         'date'
     ];
 

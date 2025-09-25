@@ -69,7 +69,7 @@
                           <select class="form-control" name="day" required>
                             <option>MONDAY</option>
                             <option>TUESDAY</option>
-                            <option>WEDNESSDAY</option>
+                            <option>WEDNESDAY</option>
                             <option>THURSDAY</option>
                             <option>FRIDAY</option>
                             <option>SATURDAY</option>

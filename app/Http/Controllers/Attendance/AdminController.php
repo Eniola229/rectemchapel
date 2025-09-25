@@ -31,6 +31,7 @@ class AdminController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'passport' => 'required|string',
+            'role' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -54,7 +55,7 @@ class AdminController extends Controller
         $user = new Admin();
         $user->name = $request->input('name');
         $user->email = $request->input('email');
-        $user->role = "SUPER";
+        $user->role = $request->input('role');;
         $user->password = bcrypt($request->input('password'));
         $user->avatar = $passportPath; // Store the Cloudinary URL
         $user->save();
