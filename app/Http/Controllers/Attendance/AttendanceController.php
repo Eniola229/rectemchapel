@@ -407,7 +407,8 @@ public function attendancehistory(Request $request)
                 $record->student->matric_no,
                 $record->service,
                 $record->is_late ? 'Late' : 'On Time',
-                $record->created_at->format('h:i A'),
+                'Checked In: ' . $record->created_at->format('h:i A'),
+                'Checked Out: ' . $record->checked_out_at
             ]);
         }
 
