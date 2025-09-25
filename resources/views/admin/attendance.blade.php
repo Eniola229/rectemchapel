@@ -41,6 +41,13 @@
                 </div>
             </div>
         </div>
+
+        <!-- Matric Number Check -->
+        <div class="mt-3">
+            <input type="text" id="matricNumber" class="form-control d-inline-block w-auto" placeholder="Enter Matric Number">
+            <button class="btn btn-success" id="matricCheckin">Check In</button>
+            <button class="btn btn-warning" id="matricCheckout">Check Out</button>
+        </div>
     </div>
 </main>
 
@@ -51,6 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const scanText = document.getElementById('scanText');
     const scanStatus = document.getElementById('scanStatus');
     const checkoutBtn = document.getElementById('checkoutBtn');
+    const matricInput = document.getElementById('matricNumber');
+    const matricCheckinBtn = document.getElementById('matricCheckin');
+    const matricCheckoutBtn = document.getElementById('matricCheckout');
 
     const presentStudents = new Set(@json($presentIds));
     const students = @json($students);
@@ -58,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLists() {
         const presentList = document.getElementById('presentList');
         const absentList = document.getElementById('absentList');
-
         presentList.innerHTML = '';
         absentList.innerHTML = '';
 
@@ -72,49 +81,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             li.classList.add('list-group-item');
             li.textContent = student.name;
-
-            if (presentStudents.has(student.id)) {
-                presentList.appendChild(li);
-            } else {
-                absentList.appendChild(li);
-            }
+            if (presentStudents.has(student.id)) presentList.appendChild(li);
+            else absentList.appendChild(li);
         });
     }
 
     updateLists();
 
-    // MARK ATTENDANCE
+    // SCAN ATTENDANCE
     scanBtn.addEventListener('click', async () => {
         scanBtn.disabled = true;
-        scanText.textContent = 'Scanning...';
+        scanText.textContent = 'Loading...';
         scanStatus.innerHTML = '<span class="text-info">Capturing fingerprint...</span>';
 
         try {
             const captureRes = await fetch('{{ route("fingerprint.capture") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                headers: {'Content-Type': 'application/json','X-CSRF-TOKEN': '{{ csrf_token() }}'},
                 body: JSON.stringify({})
             });
-            const captureData = await captureRes.json();
 
-            if (!captureData.success) {
-                scanStatus.innerHTML = `<span class="text-danger">${captureData.message}</span>`;
-                scanBtn.disabled = false;
-                scanText.textContent = 'Scan Fingerprint';
-                return;
-            }
+            const captureText = await captureRes.text();
+            let captureData;
+            try { captureData = JSON.parse(captureText); } 
+            catch { throw new Error('Invalid response from fingerprint capture'); }
 
+            if (!captureData.success) throw new Error(captureData.message);
             const fingerprintBase64 = captureData.data;
 
             const markRes = await fetch('{{ route("attendance.mark") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                headers: {'Content-Type': 'application/json','X-CSRF-TOKEN': '{{ csrf_token() }}'},
                 body: JSON.stringify({
                     fingerprint: fingerprintBase64,
                     service: '{{ $time->service ?? "" }}',
@@ -122,24 +119,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
-            const markData = await markRes.json();
+            const markText = await markRes.text();
+            let markData;
+            try { markData = JSON.parse(markText); } 
+            catch { throw new Error('Invalid response from attendance mark'); }
 
-            if (markData.error) {
-                scanStatus.innerHTML = `<span class="text-danger">${markData.error}</span>`;
-                Swal.fire('Error', markData.error, 'error');
-            } else {
-                const student = markData.student;
-                const statusText = markData.is_late ? 'Late' : 'Present';
-                scanStatus.innerHTML = `<span class="text-success">${student.name} marked ${statusText}</span>`;
-                Swal.fire('Success', `${student.name} marked ${statusText}`, 'success');
+            if (markData.error) throw new Error(markData.error);
 
-                presentStudents.add(student.id);
-                updateLists();
-            }
-
-        } catch (err) {
-            scanStatus.innerHTML = `<span class="text-danger">Network error: ${err.message}</span>`;
-            Swal.fire('Error', `Network error: ${err.message}`, 'error');
+            const student = markData.student;
+            const statusText = markData.is_late ? 'Late' : 'Present';
+            scanStatus.innerHTML = `<span class="text-success">${student.name} marked ${statusText}</span>`;
+            Swal.fire('Success', `${student.name} marked ${statusText}`, 'success');
+            presentStudents.add(student.id);
+            updateLists();
+        } catch(err) {
+            scanStatus.innerHTML = `<span class="text-danger">${err.message}</span>`;
+            Swal.fire('Error', err.message, 'error');
         } finally {
             scanBtn.disabled = false;
             scanText.textContent = 'Scan Fingerprint';
@@ -149,34 +144,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // CHECKOUT
     checkoutBtn.addEventListener('click', async () => {
         checkoutBtn.disabled = true;
-        checkoutBtn.textContent = 'Scanning...';
+        checkoutBtn.textContent = 'Loading...';
 
         try {
             const captureRes = await fetch('{{ route("fingerprint.capture") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                headers: {'Content-Type': 'application/json','X-CSRF-TOKEN': '{{ csrf_token() }}'},
                 body: JSON.stringify({})
             });
-            const captureData = await captureRes.json();
 
-            if (!captureData.success) {
-                scanStatus.innerHTML = `<span class="text-danger">${captureData.message}</span>`;
-                checkoutBtn.disabled = false;
-                checkoutBtn.textContent = 'Checkout';
-                return;
-            }
+            const captureText = await captureRes.text();
+            let captureData;
+            try { captureData = JSON.parse(captureText); } 
+            catch { throw new Error('Invalid response from fingerprint capture'); }
 
+            if (!captureData.success) throw new Error(captureData.message);
             const fingerprintBase64 = captureData.data;
 
             const res = await fetch('{{ route("attendance.checkout") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
+                headers: {'Content-Type': 'application/json','X-CSRF-TOKEN': '{{ csrf_token() }}'},
                 body: JSON.stringify({
                     fingerprint: fingerprintBase64,
                     service: '{{ $time->service ?? "" }}',
@@ -184,26 +171,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
-            const data = await res.json();
+            const resText = await res.text();
+            let data;
+            try { data = JSON.parse(resText); } 
+            catch { throw new Error('Invalid response from checkout'); }
 
-            if (data.error) {
-                Swal.fire('Error', data.error, 'error');
-                scanStatus.innerHTML = `<span class="text-danger">${data.error}</span>`;
-            } else {
-                const student = data.student;
-                scanStatus.innerHTML = `<span class="text-success">${student.name} checked out successfully</span>`;
-                Swal.fire('Success', `${student.name} checked out`, 'success');
-            }
+            if (data.error) throw new Error(data.error);
 
-        } catch (err) {
-            scanStatus.innerHTML = `<span class="text-danger">Network error: ${err.message}</span>`;
-            Swal.fire('Error', `Network error: ${err.message}`, 'error');
+            scanStatus.innerHTML = `<span class="text-success">${data.student.name} checked out successfully</span>`;
+            Swal.fire('Success', `${data.student.name} checked out`, 'success');
+
+        } catch(err) {
+            scanStatus.innerHTML = `<span class="text-danger">${err.message}</span>`;
+            Swal.fire('Error', err.message, 'error');
         } finally {
             checkoutBtn.disabled = false;
             checkoutBtn.textContent = 'Checkout';
         }
     });
 
+    // MATRIC NUMBER CHECK IN / CHECK OUT
+    async function handleMatric(action) {
+        const matric = matricInput.value.trim();
+        if(!matric) return Swal.fire('Error','Please enter a matric number','error');
+
+        const btn = action==='checkin'? matricCheckinBtn : matricCheckoutBtn;
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Loading...';
+
+        try {
+            const url = action==='checkin' ? '{{ route("attendance.mark.matric") }}' : '{{ route("attendance.checkout.matric") }}';
+            const res = await fetch(url, {
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+                body: JSON.stringify({
+                    matric_number: matric,
+                    service: '{{ $time->service ?? "" }}',
+                    service_time: '{{ $time->time ?? "" }}'
+                })
+            });
+
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } 
+            catch { throw new Error('Invalid JSON response from server'); }
+
+            if(data.error) throw new Error(data.error);
+
+            Swal.fire('Success', `${data.student.name} ${action==='checkin'?'checked in':'checked out'}`, 'success');
+            if(action==='checkin') presentStudents.add(data.student.id);
+            updateLists();
+            matricInput.value = '';
+        } catch(err) {
+            Swal.fire('Error', err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    matricCheckinBtn.addEventListener('click', ()=>handleMatric('checkin'));
+    matricCheckoutBtn.addEventListener('click', ()=>handleMatric('checkout'));
 });
 </script>
 

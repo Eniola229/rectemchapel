@@ -223,6 +223,93 @@ public function checkout(Request $request)
     }
 }
 
+public function markMatric(Request $request)
+{
+        // Fix service_time if only time is sent (add today's date)
+        if ($request->has('service_time') && !preg_match('/\d{4}-\d{2}-\d{2}/', $request->service_time)) {
+            $request->merge([
+                'service_time' => now()->toDateString() . ' ' . $request->service_time
+            ]);
+        }
+    $validator = Validator::make($request->all(), [
+        'matric_number' => 'required|string|exists:students,matric_no',
+        'service'       => 'required|string',
+        'service_time'  => 'required|date',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'error' => $validator->errors()->first()
+        ], 422);
+    }
+
+    try {
+        $student = Student::where('matric_no', $request->matric_number)->first();
+
+        $attendance = Attendance::firstOrCreate([
+            'student_id' => $student->id,
+            'service'    => $request->service,
+            'date'       => now()->toDateString(),
+        ], [
+            'is_late' => now()->gt($request->service_time)
+        ]);
+
+        if ($attendance->wasRecentlyCreated) {
+            return response()->json(['student' => $student]);
+        } else {
+            return response()->json(['error' => 'Attendance already marked for today'], 422);
+        }
+    } catch (\Throwable $e) {
+        \Log::error('Mark Matric Error: ' . $e->getMessage());
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+
+public function checkoutMatric(Request $request)
+{
+        // Fix service_time if only time is sent (add today's date)
+        if ($request->has('service_time') && !preg_match('/\d{4}-\d{2}-\d{2}/', $request->service_time)) {
+            $request->merge([
+                'service_time' => now()->toDateString() . ' ' . $request->service_time
+            ]);
+        }
+    $validator = Validator::make($request->all(), [
+        'matric_number' => 'required|string|exists:students,matric_no',
+        'service'       => 'required|string',
+        'service_time'  => 'required|date',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'error' => $validator->errors()->first()
+        ], 422);
+    }
+
+    try {
+        $student = Student::where('matric_no', $request->matric_number)->first();
+
+        $attendance = Attendance::where('student_id', $student->id)
+            ->where('service', $request->service)
+            ->whereDate('date', now()->toDateString())
+            ->first();
+
+        if (!$attendance) {
+            return response()->json(['error' => 'Attendance not marked yet'], 422);
+        }
+
+        if ($attendance->checked_out_at) {
+            return response()->json(['error' => 'Already checked out today'], 422);
+        }
+
+        $attendance->update(['checked_out_at' => now()]);
+
+        return response()->json(['student' => $student]);
+    } catch (\Throwable $e) {
+        \Log::error('Checkout Matric Error: ' . $e->getMessage());
+        return response()->json(['error' => 'Server error'], 500);
+    }
+}
+
 /**
  * Compare two images using SSIM (grayscale + resize)
  */
